@@ -3,19 +3,28 @@
 const { ZigBeeDevice } = require('homey-zigbeedriver');
 const { Cluster, CLUSTER } = require('zigbee-clusters');
 
-const IkeaSpecificSceneCluster = require('../../lib/IkeaSpecificSceneCluster');
-const IkeaSpecificSceneBoundCluster = require('../../lib/IkeaSpecificSceneBoundCluster');
+const ShellyBasicCluster = require('../../lib/ShellyBasicCluster');
 const OnOffBoundCluster = require('../../lib/OnOffBoundCluster');
 const LevelControlBoundCluster = require('../../lib/LevelControlBoundCluster');
 
-Cluster.addCluster(IkeaSpecificSceneCluster);
+// Register the custom Basic cluster with Shelly manufacturer-specific attributes
+Cluster.addCluster(ShellyBasicCluster);
 
+/**
+ * Shelly BLU Remote Control ZB
+ *
+ * This remote does NOT use Zigbee binding. Instead, it groupcasts On/Off and
+ * Level Control commands to configurable groups. The group addresses are stored
+ * as 4 manufacturer-specific attributes (0x8000–0x8003, mfgCode 0x1002) in the
+ * Basic cluster on endpoint 1.
+ *
+ * Commands sent by the remote:
+ *   On/Off cluster (client):       Off, On, Toggle
+ *   Level Control cluster (client): MoveToLevel
+ */
 class RemoteControl extends ZigBeeDevice {
 
   async onNodeInit({ zclNode }) {
-    this._currentLongPress = null;
-    this._currentSceneLongPress = null;
-
     // Register measure_battery capability and configure attribute reporting
     this.batteryThreshold = 20;
     this.registerCapability('alarm_battery', CLUSTER.POWER_CONFIGURATION, {
@@ -24,132 +33,161 @@ class RemoteControl extends ZigBeeDevice {
       },
       reportOpts: {
         configureAttributeReporting: {
-          minInterval: 0, // No minimum reporting interval
-          maxInterval: 60000, // Maximally every ~16 hours
-          minChange: 5, // Report when value changed by 5
+          minInterval: 0,
+          maxInterval: 60000, // ~16 hours
+          minChange: 5,
         },
       },
     });
 
-    // Bind on/off button commands
+    // Bind On/Off groupcast commands
     zclNode.endpoints[1].bind(CLUSTER.ON_OFF.NAME, new OnOffBoundCluster({
+      onSetOn: this._onCommandHandler.bind(this),
+      onSetOff: this._offCommandHandler.bind(this),
       onToggle: this._toggleCommandHandler.bind(this),
     }));
 
-    // Bind Ikea scene button commands
-    zclNode.endpoints[1].bind(CLUSTER.SCENES.NAME, new IkeaSpecificSceneBoundCluster({
-      onIkeaSceneStep: this._ikeaStepCommandHandler.bind(this),
-      onIkeaSceneMove: this._ikeaMoveCommandHandler.bind(this),
-      onIkeaSceneMoveStop: this._ikeaStopCommandHandler.bind(this),
-    }));
-
-    // Bind dim button commands
+    // Bind Level Control groupcast commands
     zclNode.endpoints[1].bind(CLUSTER.LEVEL_CONTROL.NAME, new LevelControlBoundCluster({
-      onStep: this._stepCommandHandler.bind(this),
-      onStepWithOnOff: this._stepCommandHandler.bind(this),
-
-      onMove: this._moveCommandHandler.bind(this),
-      onMoveWithOnOff: this._moveCommandHandler.bind(this),
-
-      onStop: this._stopCommandHandler.bind(this),
-      onStopWithOnOff: this._stopCommandHandler.bind(this),
+      onMoveToLevel: this._moveToLevelCommandHandler.bind(this),
+      onMoveToLevelWithOnOff: this._moveToLevelCommandHandler.bind(this),
     }));
+
+    // Read group addresses from the device (non-blocking, device is sleepy)
+    this._readGroupAddresses(zclNode).catch(err => {
+      this.error('Could not read group addresses on init (device may be asleep):', err.message);
+    });
   }
 
   /**
-   * Triggers the 'toggled' Flow.
+   * Read the 4 manufacturer-specific group address attributes from the Basic cluster.
+   * Since this is a sleepy device, this may time out — it is best done right after
+   * pairing when the device is still awake.
+   * @param {object} zclNode
+   * @private
+   */
+  async _readGroupAddresses(zclNode) {
+    try {
+      const basicCluster = zclNode.endpoints[1].clusters.basic;
+      const result = await basicCluster.readAttributes([
+        'shellyGroupAddress1',
+        'shellyGroupAddress2',
+        'shellyGroupAddress3',
+        'shellyGroupAddress4',
+      ]);
+
+      this.log('Group addresses read from device:', result);
+
+      const settings = {};
+      if (result.shellyGroupAddress1 != null) settings.group_address_1 = result.shellyGroupAddress1;
+      if (result.shellyGroupAddress2 != null) settings.group_address_2 = result.shellyGroupAddress2;
+      if (result.shellyGroupAddress3 != null) settings.group_address_3 = result.shellyGroupAddress3;
+      if (result.shellyGroupAddress4 != null) settings.group_address_4 = result.shellyGroupAddress4;
+
+      if (Object.keys(settings).length > 0) {
+        await this.setSettings(settings);
+        this.log('Group address settings saved:', settings);
+      }
+    } catch (err) {
+      this.error('Failed to read group addresses:', err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Write group addresses to the device when settings are changed.
+   * @param {object} oldSettings
+   * @param {object} newSettings
+   * @param {string[]} changedKeys
+   */
+  async onSettings({ oldSettings, newSettings, changedKeys }) {
+    const attrMap = {
+      group_address_1: 'shellyGroupAddress1',
+      group_address_2: 'shellyGroupAddress2',
+      group_address_3: 'shellyGroupAddress3',
+      group_address_4: 'shellyGroupAddress4',
+    };
+
+    const writeAttrs = {};
+    for (const key of changedKeys) {
+      if (attrMap[key]) {
+        writeAttrs[attrMap[key]] = newSettings[key];
+      }
+    }
+
+    if (Object.keys(writeAttrs).length > 0) {
+      this.log('Writing group addresses to device:', writeAttrs);
+      const basicCluster = this.zclNode.endpoints[1].clusters.basic;
+      await basicCluster.writeAttributes(writeAttrs);
+      this.log('Group addresses written successfully');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  //  On/Off command handlers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handles the On command from the remote.
+   * @private
+   */
+  _onCommandHandler() {
+    this.log('Received On command');
+    this.triggerFlow({ id: 'remote_on' })
+      .then(() => this.log('Flow triggered: remote_on'))
+      .catch(err => this.error('Error triggering flow remote_on:', err));
+  }
+
+  /**
+   * Handles the Off command from the remote.
+   * @private
+   */
+  _offCommandHandler() {
+    this.log('Received Off command');
+    this.triggerFlow({ id: 'remote_off' })
+      .then(() => this.log('Flow triggered: remote_off'))
+      .catch(err => this.error('Error triggering flow remote_off:', err));
+  }
+
+  /**
+   * Handles the Toggle command from the remote.
    * @private
    */
   _toggleCommandHandler() {
-    this.triggerFlow({ id: 'toggled' })
-      .then(() => this.log('flow was triggered', 'toggled'))
-      .catch(err => this.error('Error: triggering flow', 'toggled', err));
+    this.log('Received Toggle command');
+    this.triggerFlow({ id: 'remote_toggle' })
+      .then(() => this.log('Flow triggered: remote_toggle'))
+      .catch(err => this.error('Error triggering flow remote_toggle:', err));
   }
 
-  /**
-   * Stores the last known long press move mode.
-   * @param {'up'|'down'} moveMode
-   * @private
-   */
-  _moveCommandHandler({ moveMode }) {
-    this._currentLongPress = moveMode;
-  }
+  // ---------------------------------------------------------------------------
+  //  Level Control command handlers
+  // ---------------------------------------------------------------------------
 
   /**
-   * Handles Ikea specific move command `onIkeaSceneMove`, will store the last known long press
-   * scene move mode.
-   * @param {'up'|'down'} mode
-   * @param {number} stepSize - A change of `currentLevel` in step size units.
-   * @param {number} transitionTime - Time in 1/10th seconds specified performing the step
-   * should take.
+   * Handles the MoveToLevel command from the remote.
+   * @param {object} payload
+   * @param {number} payload.level - Target level (0–254)
+   * @param {number} payload.transitionTime - Transition time in 1/10th seconds
    * @private
    */
-  _ikeaMoveCommandHandler({ mode, stepSize, transitionTime }) {
-    this._currentSceneLongPress = mode;
-  }
+  _moveToLevelCommandHandler({ level, transitionTime }) {
+    // Normalize level from 0–254 to 0–1
+    const normalizedLevel = Math.min(Math.max(level / 254, 0), 1);
+    const roundedLevel = Math.round(normalizedLevel * 100) / 100;
 
-  /**
-   * Handles `onStep` and `onStepWithOnOff` commands and triggers a Flow based on the `mode`
-   * parameter.
-   * @param {'up'|'down'} mode
-   * @param {number} stepSize - A change of `currentLevel` in step size units.
-   * @param {number} transitionTime - Time in 1/10th seconds specified performing the step
-   * should take.
-   * @private
-   */
-  _stepCommandHandler({ mode, stepSize, transitionTime }) {
-    if (typeof mode === 'string') {
-      this.triggerFlow({ id: `dim_${mode}` })
-        .then(() => this.log('flow was triggered', `dim_${mode}`))
-        .catch(err => this.error('Error: triggering flow', `dim_${mode}`, err));
-    }
-  }
+    this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}`);
 
-  /**
-   * Handles Ikea specific scene step command `onIkeaSceneStep` and triggers a Flow based on the
-   * `mode` parameter.
-   * @param {'up'|'down'} mode
-   * @param {number} stepSize - A change of `currentLevel` in step size units.
-   * @param {number} transitionTime - Time in 1/10th seconds specified performing the step
-   * should take.
-   * @private
-   */
-  _ikeaStepCommandHandler({ mode, stepSize, transitionTime }) {
-    if (typeof mode === 'string') {
-      this.triggerFlow({ id: `scene_${mode}` })
-        .then(() => this.log('flow was triggered', `scene_${mode}`))
-        .catch(err => this.error('Error: triggering flow', `scene_${mode}`, err));
-    }
-  }
-
-  /**
-   * Handles `onStop` and `onStopWithOnOff` commands and triggers a Flow based on the last known
-   * long press move mode.
-   * @private
-   */
-  _stopCommandHandler() {
-    if (this._currentLongPress) {
-      const flowId = `dim_${this._currentLongPress}_long_press`;
-      this.triggerFlow({ id: flowId })
-        .then(() => this.log('flow was triggered', flowId))
-        .catch(err => this.error('Error: triggering flow', flowId, err));
-      this._currentLongPress = null;
-    }
-  }
-
-  /**
-   * Handles Ikea specific stop command `onIkeaSceneMoveStop` and triggers a Flow based on the
-   * last known long press scene move mode.
-   * @private
-   */
-  _ikeaStopCommandHandler() {
-    if (this._currentSceneLongPress) {
-      const flowId = `scene_${this._currentSceneLongPress}_long_press`;
-      this.triggerFlow({ id: flowId })
-        .then(() => this.log('flow was triggered', flowId))
-        .catch(err => this.error('Error: triggering flow', flowId, err));
-      this._currentSceneLongPress = null;
-    }
+    this.triggerFlow({
+      id: 'remote_level',
+      tokens: {
+        level: roundedLevel,
+        level_raw: level,
+        transition_time: transitionTime != null ? transitionTime / 10 : 0,
+      },
+    })
+      .then(() => this.log('Flow triggered: remote_level'))
+      .catch(err => this.error('Error triggering flow remote_level:', err));
   }
 
 }

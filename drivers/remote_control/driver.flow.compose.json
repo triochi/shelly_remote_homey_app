@@ -1,67 +1,54 @@
 {
   "triggers": [
     {
-      "id": "toggled",
+      "id": "remote_on",
       "title": {
-        "en": "On/off button was pressed",
-        "nl": "Aan/uit knop is ingedrukt"
+        "en": "On command was received"
       }
     },
     {
-      "id": "dim_down",
+      "id": "remote_off",
       "title": {
-        "en": "Lower brightness was pressed",
-        "nl": "Lagere helderheid is ingedrukt"
+        "en": "Off command was received"
       }
     },
     {
-      "id": "dim_up",
+      "id": "remote_toggle",
       "title": {
-        "en": "Higher brightness was pressed",
-        "nl": "Hogere helderheid is ingedrukt"
+        "en": "Toggle command was received"
       }
     },
     {
-      "id": "dim_down_long_press",
+      "id": "remote_level",
       "title": {
-        "en": "Lower brightness was long pressed",
-        "nl": "Lagere helderheid is lang ingedrukt"
-      }
-    },
-    {
-      "id": "dim_up_long_press",
-      "title": {
-        "en": "Higher brightness was long pressed",
-        "nl": "Hogere helderheid is lang ingedrukt"
-      }
-    },
-    {
-      "id": "scene_down",
-      "title": {
-        "en": "Left button was pressed",
-        "nl": "Knop links is ingedrukt"
-      }
-    },
-    {
-      "id": "scene_up",
-      "title": {
-        "en": "Right button was pressed",
-        "nl": "Knop rechts is ingedrukt"
-      }
-    },
-    {
-      "id": "scene_down_long_press",
-      "title": {
-        "en": "Left button was long pressed",
-        "nl": "Knop links is lang ingedrukt"
-      }
-    },
-    {
-      "id": "scene_up_long_press",
-      "title": {
-        "en": "Right button was long pressed",
-        "nl": "Knop rechts is lang ingedrukt"
-      }
+        "en": "Level command was received"
+      },
+      "tokens": [
+        {
+          "name": "level",
+          "type": "number",
+          "title": {
+            "en": "Level"
+          },
+          "example": 0.75
+        },
+        {
+          "name": "level_raw",
+          "type": "number",
+          "title": {
+            "en": "Level (raw)"
+          },
+          "example": 191
+        },
+        {
+          "name": "transition_time",
+          "type": "number",
+          "title": {
+            "en": "Transition time (s)"
+          },
+          "example": 1
+        }
+      ]
     }
   ]
 }

@@ -5,16 +5,16 @@
   "sdk": 3,
   "runtime": "nodejs",
   "platforms": [
-    "cloud"
+    "local"
   ],
   "name": {
-    "en": "blu_remote"
+    "en": "Shelly BLU Remote ZB"
   },
   "description": {
-    "en": "Add support for Shelly BLU Remote ZB"
+    "en": "Add support for the Shelly BLU Remote Control ZB"
   },
   "category": [
-    "lights"
+    "appliances"
   ],
   "permissions": [],
   "images": {

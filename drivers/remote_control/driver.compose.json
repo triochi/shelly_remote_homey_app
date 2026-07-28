@@ -1,9 +1,7 @@
 {
   "id": "remote_control",
   "name": {
-    "en": "Remote Control",
-    "nl": "Afstandsbediening",
-    "de": "Fernbedienung"
+    "en": "BLU Remote Control ZB"
   },
   "class": "remote",
   "capabilities": [
@@ -11,7 +9,8 @@
   ],
   "energy": {
     "batteries": [
-      "AAA"
+      "CR2032",
+      "CR2032"
     ]
   },
   "zigbee": {
@@ -25,12 +24,9 @@
           0,
           1,
           3,
-          6,
-          8,
-          20
+          32
         ],
         "bindings": [
-          1,
           6,
           8
         ]
@@ -39,12 +35,84 @@
     "learnmode": {
       "image": "/drivers/remote_control/assets/learnmode.svg",
       "instruction": {
-        "en": "Open up the Remote Control to access the pair button. Press the pair button 4 times in 5 seconds and wait for the LED to start blinking.",
-        "nl": "Maak de Afstandsbediening open om bij de pair knop te komen. Druk 4 keer op de pair knop binnen 5 seconden en wacht tot het lampje gaat knipperen.",
-        "de": "Öffne den Fernbedienung, um auf die Koppeln-Taste zuzugreifen. Drücke die Taste 4 Mal in 5 Sekunden."
+        "en": "Press and hold the center button on the BLU Remote for 10 seconds until the LED starts blinking rapidly, then release."
       }
     }
   },
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Group Addresses"
+      },
+      "children": [
+        {
+          "id": "group_address_1",
+          "type": "number",
+          "label": {
+            "en": "Group Address 1"
+          },
+          "hint": {
+            "en": "Zigbee group address for button group 1 (1\u201365534)."
+          },
+          "value": 1,
+          "attr": {
+            "min": 1,
+            "max": 65534,
+            "step": 1
+          }
+        },
+        {
+          "id": "group_address_2",
+          "type": "number",
+          "label": {
+            "en": "Group Address 2"
+          },
+          "hint": {
+            "en": "Zigbee group address for button group 2 (1\u201365534)."
+          },
+          "value": 2,
+          "attr": {
+            "min": 1,
+            "max": 65534,
+            "step": 1
+          }
+        },
+        {
+          "id": "group_address_3",
+          "type": "number",
+          "label": {
+            "en": "Group Address 3"
+          },
+          "hint": {
+            "en": "Zigbee group address for button group 3 (1\u201365534)."
+          },
+          "value": 3,
+          "attr": {
+            "min": 1,
+            "max": 65534,
+            "step": 1
+          }
+        },
+        {
+          "id": "group_address_4",
+          "type": "number",
+          "label": {
+            "en": "Group Address 4"
+          },
+          "hint": {
+            "en": "Zigbee group address for button group 4 (1\u201365534)."
+          },
+          "value": 4,
+          "attr": {
+            "min": 1,
+            "max": 65534,
+            "step": 1
+          }
+        }
+      ]
+    }
+  ],
   "images": {
     "large": "/drivers/remote_control/assets/images/large.png",
     "small": "/drivers/remote_control/assets/images/small.png",
