@@ -6,7 +6,8 @@
   "sdk": 3,
   "runtime": "nodejs",
   "platforms": [
-    "local"
+    "local",
+    "cloud"
   ],
   "name": {
     "en": "Shelly BLU Remote ZB"
@@ -115,6 +116,13 @@
       "name": {
         "en": "BLU Remote Control ZB"
       },
+      "platforms": [
+        "local",
+        "cloud"
+      ],
+      "connectivity": [
+        "zigbee"
+      ],
       "class": "remote",
       "capabilities": [
         "alarm_battery"

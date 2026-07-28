@@ -3,6 +3,8 @@
   "name": {
     "en": "BLU Remote Control ZB"
   },
+  "platforms": ["local", "cloud"],
+  "connectivity": ["zigbee"],
   "class": "remote",
   "capabilities": [
     "alarm_battery"
