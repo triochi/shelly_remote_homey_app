@@ -35,6 +35,29 @@
         "title": {
           "en": "On command was received"
         },
+        "titleFormatted": {
+          "en": "On command was received on group [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=remote_control"
+          },
+          {
+            "type": "number",
+            "name": "group",
+            "title": {
+              "en": "Group"
+            },
+            "placeholder": {
+              "en": "0 = any group"
+            },
+            "min": 0,
+            "max": 65534,
+            "step": 1
+          }
+        ],
         "tokens": [
           {
             "name": "group",
@@ -43,13 +66,6 @@
               "en": "Group"
             },
             "example": 1
-          }
-        ],
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=remote_control"
           }
         ]
       },
@@ -58,6 +74,29 @@
         "title": {
           "en": "Off command was received"
         },
+        "titleFormatted": {
+          "en": "Off command was received on group [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=remote_control"
+          },
+          {
+            "type": "number",
+            "name": "group",
+            "title": {
+              "en": "Group"
+            },
+            "placeholder": {
+              "en": "0 = any group"
+            },
+            "min": 0,
+            "max": 65534,
+            "step": 1
+          }
+        ],
         "tokens": [
           {
             "name": "group",
@@ -66,13 +105,6 @@
               "en": "Group"
             },
             "example": 1
-          }
-        ],
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=remote_control"
           }
         ]
       },
@@ -81,6 +113,29 @@
         "title": {
           "en": "Toggle command was received"
         },
+        "titleFormatted": {
+          "en": "Toggle command was received on group [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=remote_control"
+          },
+          {
+            "type": "number",
+            "name": "group",
+            "title": {
+              "en": "Group"
+            },
+            "placeholder": {
+              "en": "0 = any group"
+            },
+            "min": 0,
+            "max": 65534,
+            "step": 1
+          }
+        ],
         "tokens": [
           {
             "name": "group",
@@ -90,13 +145,6 @@
             },
             "example": 1
           }
-        ],
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=remote_control"
-          }
         ]
       },
       {
@@ -104,6 +152,29 @@
         "title": {
           "en": "Level command was received"
         },
+        "titleFormatted": {
+          "en": "Level command was received on group [[group]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=remote_control"
+          },
+          {
+            "type": "number",
+            "name": "group",
+            "title": {
+              "en": "Group"
+            },
+            "placeholder": {
+              "en": "0 = any group"
+            },
+            "min": 0,
+            "max": 65534,
+            "step": 1
+          }
+        ],
         "tokens": [
           {
             "name": "group",
@@ -136,13 +207,6 @@
               "en": "Transition time (s)"
             },
             "example": 1
-          }
-        ],
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=remote_control"
           }
         ]
       }

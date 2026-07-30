@@ -5,6 +5,24 @@
       "title": {
         "en": "On command was received"
       },
+      "titleFormatted": {
+        "en": "On command was received on group [[group]]"
+      },
+      "args": [
+        {
+          "type": "number",
+          "name": "group",
+          "title": {
+            "en": "Group"
+          },
+          "placeholder": {
+            "en": "0 = any group"
+          },
+          "min": 0,
+          "max": 65534,
+          "step": 1
+        }
+      ],
       "tokens": [
         {
           "name": "group",
@@ -21,6 +39,24 @@
       "title": {
         "en": "Off command was received"
       },
+      "titleFormatted": {
+        "en": "Off command was received on group [[group]]"
+      },
+      "args": [
+        {
+          "type": "number",
+          "name": "group",
+          "title": {
+            "en": "Group"
+          },
+          "placeholder": {
+            "en": "0 = any group"
+          },
+          "min": 0,
+          "max": 65534,
+          "step": 1
+        }
+      ],
       "tokens": [
         {
           "name": "group",
@@ -37,6 +73,24 @@
       "title": {
         "en": "Toggle command was received"
       },
+      "titleFormatted": {
+        "en": "Toggle command was received on group [[group]]"
+      },
+      "args": [
+        {
+          "type": "number",
+          "name": "group",
+          "title": {
+            "en": "Group"
+          },
+          "placeholder": {
+            "en": "0 = any group"
+          },
+          "min": 0,
+          "max": 65534,
+          "step": 1
+        }
+      ],
       "tokens": [
         {
           "name": "group",
@@ -53,6 +107,24 @@
       "title": {
         "en": "Level command was received"
       },
+      "titleFormatted": {
+        "en": "Level command was received on group [[group]]"
+      },
+      "args": [
+        {
+          "type": "number",
+          "name": "group",
+          "title": {
+            "en": "Group"
+          },
+          "placeholder": {
+            "en": "0 = any group"
+          },
+          "min": 0,
+          "max": 65534,
+          "step": 1
+        }
+      ],
       "tokens": [
         {
           "name": "group",

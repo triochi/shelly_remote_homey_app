@@ -25,6 +25,19 @@ Cluster.addCluster(ShellyBasicCluster);
 class RemoteControl extends ZigBeeDevice {
 
   async onNodeInit({ zclNode }) {
+    // Register flow card run listeners for group filtering.
+    // args.group is what the user configures on the card (0 = any group).
+    // state.group is the actual groupId from the received command.
+    const groupRunListener = async (args, state) => {
+      if (args.group === 0) return true; // 0 means "any group"
+      return args.group === state.group;
+    };
+
+    this.homey.flow.getDeviceTriggerCard('remote_on').registerRunListener(groupRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_off').registerRunListener(groupRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_toggle').registerRunListener(groupRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_level').registerRunListener(groupRunListener);
+
     // Register measure_battery capability and configure attribute reporting
     this.batteryThreshold = 20;
     this.registerCapability('alarm_battery', CLUSTER.POWER_CONFIGURATION, {
@@ -153,9 +166,11 @@ class RemoteControl extends ZigBeeDevice {
    */
   _onCommandHandler({ groupId }) {
     this.log(`Received On command (group=${groupId})`);
+    const group = groupId != null ? groupId : -1;
     this.triggerFlow({
       id: 'remote_on',
-      tokens: { group: groupId != null ? groupId : -1 },
+      tokens: { group },
+      state: { group },
     })
       .then(() => this.log('Flow triggered: remote_on'))
       .catch(err => this.error('Error triggering flow remote_on:', err));
@@ -169,9 +184,11 @@ class RemoteControl extends ZigBeeDevice {
    */
   _offCommandHandler({ groupId }) {
     this.log(`Received Off command (group=${groupId})`);
+    const group = groupId != null ? groupId : -1;
     this.triggerFlow({
       id: 'remote_off',
-      tokens: { group: groupId != null ? groupId : -1 },
+      tokens: { group },
+      state: { group },
     })
       .then(() => this.log('Flow triggered: remote_off'))
       .catch(err => this.error('Error triggering flow remote_off:', err));
@@ -185,9 +202,11 @@ class RemoteControl extends ZigBeeDevice {
    */
   _toggleCommandHandler({ groupId }) {
     this.log(`Received Toggle command (group=${groupId})`);
+    const group = groupId != null ? groupId : -1;
     this.triggerFlow({
       id: 'remote_toggle',
-      tokens: { group: groupId != null ? groupId : -1 },
+      tokens: { group },
+      state: { group },
     })
       .then(() => this.log('Flow triggered: remote_toggle'))
       .catch(err => this.error('Error triggering flow remote_toggle:', err));
@@ -211,14 +230,16 @@ class RemoteControl extends ZigBeeDevice {
 
     this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}, group=${groupId}`);
 
+    const group = groupId != null ? groupId : -1;
     this.triggerFlow({
       id: 'remote_level',
       tokens: {
         level: roundedLevel,
         level_raw: level,
         transition_time: transitionTime != null ? transitionTime / 10 : 0,
-        group: groupId != null ? groupId : -1,
+        group,
       },
+      state: { group },
     })
       .then(() => this.log('Flow triggered: remote_level'))
       .catch(err => this.error('Error triggering flow remote_level:', err));
