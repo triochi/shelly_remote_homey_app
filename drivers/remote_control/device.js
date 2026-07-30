@@ -67,16 +67,25 @@ class RemoteControl extends ZigBeeDevice {
    * @private
    */
   async _readGroupAddresses(zclNode) {
+    const basicCluster = zclNode.endpoints[1].clusters.basic;
+
+    // Step 1: Verify the Basic cluster works by reading a standard attribute
     try {
-      const basicCluster = zclNode.endpoints[1].clusters.basic;
+      const stdResult = await basicCluster.readAttributes(['manufacturerName', 'modelId']);
+      this.log('Basic cluster standard attrs:', stdResult);
+    } catch (err) {
+      this.error('Failed to read standard Basic attrs:', err.message);
+    }
+
+    // Step 2: Try reading mfg-specific attributes by name
+    try {
       const result = await basicCluster.readAttributes([
         'shellyGroupAddress1',
         'shellyGroupAddress2',
         'shellyGroupAddress3',
         'shellyGroupAddress4',
       ]);
-
-      this.log('Group addresses read from device:', result);
+      this.log('Group addresses read by name:', result);
 
       const settings = {};
       if (result.shellyGroupAddress1 != null) settings.group_address_1 = result.shellyGroupAddress1;
@@ -87,10 +96,19 @@ class RemoteControl extends ZigBeeDevice {
       if (Object.keys(settings).length > 0) {
         await this.setSettings(settings);
         this.log('Group address settings saved:', settings);
+        return;
       }
     } catch (err) {
-      this.error('Failed to read group addresses:', err.message);
-      throw err;
+      this.error('Failed to read group addresses by name:', err.message);
+    }
+
+    // Step 3: If named read returned empty, try raw numeric attribute IDs
+    try {
+      this.log('Trying raw numeric attribute IDs (0x8000-0x8003)...');
+      const rawResult = await basicCluster.readAttributes([0x8000, 0x8001, 0x8002, 0x8003]);
+      this.log('Group addresses read by raw ID:', rawResult);
+    } catch (err) {
+      this.error('Failed to read group addresses by raw ID:', err.message);
     }
   }
 
@@ -129,33 +147,48 @@ class RemoteControl extends ZigBeeDevice {
 
   /**
    * Handles the On command from the remote.
+   * @param {object} params
+   * @param {number} [params.groupId] - Zigbee group ID the command was sent to
    * @private
    */
-  _onCommandHandler() {
-    this.log('Received On command');
-    this.triggerFlow({ id: 'remote_on' })
+  _onCommandHandler({ groupId }) {
+    this.log(`Received On command (group=${groupId})`);
+    this.triggerFlow({
+      id: 'remote_on',
+      tokens: { group: groupId != null ? groupId : -1 },
+    })
       .then(() => this.log('Flow triggered: remote_on'))
       .catch(err => this.error('Error triggering flow remote_on:', err));
   }
 
   /**
    * Handles the Off command from the remote.
+   * @param {object} params
+   * @param {number} [params.groupId] - Zigbee group ID the command was sent to
    * @private
    */
-  _offCommandHandler() {
-    this.log('Received Off command');
-    this.triggerFlow({ id: 'remote_off' })
+  _offCommandHandler({ groupId }) {
+    this.log(`Received Off command (group=${groupId})`);
+    this.triggerFlow({
+      id: 'remote_off',
+      tokens: { group: groupId != null ? groupId : -1 },
+    })
       .then(() => this.log('Flow triggered: remote_off'))
       .catch(err => this.error('Error triggering flow remote_off:', err));
   }
 
   /**
    * Handles the Toggle command from the remote.
+   * @param {object} params
+   * @param {number} [params.groupId] - Zigbee group ID the command was sent to
    * @private
    */
-  _toggleCommandHandler() {
-    this.log('Received Toggle command');
-    this.triggerFlow({ id: 'remote_toggle' })
+  _toggleCommandHandler({ groupId }) {
+    this.log(`Received Toggle command (group=${groupId})`);
+    this.triggerFlow({
+      id: 'remote_toggle',
+      tokens: { group: groupId != null ? groupId : -1 },
+    })
       .then(() => this.log('Flow triggered: remote_toggle'))
       .catch(err => this.error('Error triggering flow remote_toggle:', err));
   }
@@ -171,12 +204,12 @@ class RemoteControl extends ZigBeeDevice {
    * @param {number} payload.transitionTime - Transition time in 1/10th seconds
    * @private
    */
-  _moveToLevelCommandHandler({ level, transitionTime }) {
+  _moveToLevelCommandHandler({ level, transitionTime, groupId }) {
     // Normalize level from 0–254 to 0–1
     const normalizedLevel = Math.min(Math.max(level / 254, 0), 1);
     const roundedLevel = Math.round(normalizedLevel * 100) / 100;
 
-    this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}`);
+    this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}, group=${groupId}`);
 
     this.triggerFlow({
       id: 'remote_level',
@@ -184,6 +217,7 @@ class RemoteControl extends ZigBeeDevice {
         level: roundedLevel,
         level_raw: level,
         transition_time: transitionTime != null ? transitionTime / 10 : 0,
+        group: groupId != null ? groupId : -1,
       },
     })
       .then(() => this.log('Flow triggered: remote_level'))

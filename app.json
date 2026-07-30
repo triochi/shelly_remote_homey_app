@@ -35,6 +35,16 @@
         "title": {
           "en": "On command was received"
         },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "number",
+            "title": {
+              "en": "Group"
+            },
+            "example": 1
+          }
+        ],
         "args": [
           {
             "type": "device",
@@ -48,6 +58,16 @@
         "title": {
           "en": "Off command was received"
         },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "number",
+            "title": {
+              "en": "Group"
+            },
+            "example": 1
+          }
+        ],
         "args": [
           {
             "type": "device",
@@ -61,6 +81,16 @@
         "title": {
           "en": "Toggle command was received"
         },
+        "tokens": [
+          {
+            "name": "group",
+            "type": "number",
+            "title": {
+              "en": "Group"
+            },
+            "example": 1
+          }
+        ],
         "args": [
           {
             "type": "device",
@@ -75,6 +105,14 @@
           "en": "Level command was received"
         },
         "tokens": [
+          {
+            "name": "group",
+            "type": "number",
+            "title": {
+              "en": "Group"
+            },
+            "example": 1
+          },
           {
             "name": "level",
             "type": "number",

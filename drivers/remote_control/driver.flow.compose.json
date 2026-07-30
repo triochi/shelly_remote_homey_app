@@ -4,19 +4,49 @@
       "id": "remote_on",
       "title": {
         "en": "On command was received"
-      }
+      },
+      "tokens": [
+        {
+          "name": "group",
+          "type": "number",
+          "title": {
+            "en": "Group"
+          },
+          "example": 1
+        }
+      ]
     },
     {
       "id": "remote_off",
       "title": {
         "en": "Off command was received"
-      }
+      },
+      "tokens": [
+        {
+          "name": "group",
+          "type": "number",
+          "title": {
+            "en": "Group"
+          },
+          "example": 1
+        }
+      ]
     },
     {
       "id": "remote_toggle",
       "title": {
         "en": "Toggle command was received"
-      }
+      },
+      "tokens": [
+        {
+          "name": "group",
+          "type": "number",
+          "title": {
+            "en": "Group"
+          },
+          "example": 1
+        }
+      ]
     },
     {
       "id": "remote_level",
@@ -24,6 +54,14 @@
         "en": "Level command was received"
       },
       "tokens": [
+        {
+          "name": "group",
+          "type": "number",
+          "title": {
+            "en": "Group"
+          },
+          "example": 1
+        },
         {
           "name": "level",
           "type": "number",
