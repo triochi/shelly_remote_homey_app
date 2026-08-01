@@ -70,10 +70,56 @@ class RemoteControl extends ZigBeeDevice {
       onMoveToLevelWithOnOff: this._moveToLevelCommandHandler.bind(this),
     }));
 
-    // Read device settings from the device (non-blocking, device is sleepy)
-    this._readDeviceSettings(zclNode).catch(err => {
-      this.error('Could not read device settings on init (device may be asleep):', err.message);
-    });
+    // On first init (right after pairing, device is still awake):
+    // - Auto-enable custom command mode on Homey Pro so that button
+    //   identification works (Homey Pro 2023+ only listens to group 0).
+    // - Read current device settings.
+    if (this.isFirstInit() && this.homey.platform === 'local') {
+      this.log('Homey Pro detected — auto-enabling custom command mode');
+      this._autoConfigureForHomeyPro(zclNode).catch(err => {
+        this.error('Could not auto-configure for Homey Pro:', err.message);
+      });
+    } else {
+      // Read device settings (non-blocking, device is sleepy)
+      this._readDeviceSettings(zclNode).catch(err => {
+        this.error('Could not read device settings on init (device may be asleep):', err.message);
+      });
+    }
+  }
+
+  /**
+   * Auto-configure the device for Homey Pro on first pairing.
+   * Sets command mode to 1 (custom) and all group addresses to 0,
+   * then reads back the settings to confirm.
+   * @param {object} zclNode
+   * @private
+   */
+  async _autoConfigureForHomeyPro(zclNode) {
+    const basicCluster = zclNode.endpoints[1].clusters.basic;
+
+    try {
+      await basicCluster.writeAttributes({
+        shellyCommandMode: 1,
+        shellyGroupAddress1: 0,
+        shellyGroupAddress2: 0,
+        shellyGroupAddress3: 0,
+        shellyGroupAddress4: 0,
+      });
+      this.log('Custom command mode and group 0 written to device');
+
+      await this.setSettings({
+        command_mode: '1',
+        group_address_1: 0,
+        group_address_2: 0,
+        group_address_3: 0,
+        group_address_4: 0,
+      });
+      this.log('Homey Pro auto-configuration complete');
+    } catch (err) {
+      this.error('Failed to auto-configure for Homey Pro:', err.message);
+      // Fall back to reading whatever is on the device
+      await this._readDeviceSettings(zclNode);
+    }
   }
 
   /**
