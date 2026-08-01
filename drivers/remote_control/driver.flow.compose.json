@@ -6,29 +6,29 @@
         "en": "On command was received"
       },
       "titleFormatted": {
-        "en": "On command was received on group [[group]]"
+        "en": "On command was received from button [[button]]"
       },
       "args": [
         {
           "type": "number",
-          "name": "group",
+          "name": "button",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "placeholder": {
-            "en": "0 = any group"
+            "en": "0 = any button"
           },
           "min": 0,
-          "max": 65534,
+          "max": 4,
           "step": 1
         }
       ],
       "tokens": [
         {
-          "name": "group",
+          "name": "button",
           "type": "number",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "example": 1
         }
@@ -40,29 +40,29 @@
         "en": "Off command was received"
       },
       "titleFormatted": {
-        "en": "Off command was received on group [[group]]"
+        "en": "Off command was received from button [[button]]"
       },
       "args": [
         {
           "type": "number",
-          "name": "group",
+          "name": "button",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "placeholder": {
-            "en": "0 = any group"
+            "en": "0 = any button"
           },
           "min": 0,
-          "max": 65534,
+          "max": 4,
           "step": 1
         }
       ],
       "tokens": [
         {
-          "name": "group",
+          "name": "button",
           "type": "number",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "example": 1
         }
@@ -74,29 +74,29 @@
         "en": "Toggle command was received"
       },
       "titleFormatted": {
-        "en": "Toggle command was received on group [[group]]"
+        "en": "Toggle command was received from button [[button]]"
       },
       "args": [
         {
           "type": "number",
-          "name": "group",
+          "name": "button",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "placeholder": {
-            "en": "0 = any group"
+            "en": "0 = any button"
           },
           "min": 0,
-          "max": 65534,
+          "max": 4,
           "step": 1
         }
       ],
       "tokens": [
         {
-          "name": "group",
+          "name": "button",
           "type": "number",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "example": 1
         }
@@ -108,29 +108,29 @@
         "en": "Level command was received"
       },
       "titleFormatted": {
-        "en": "Level command was received on group [[group]]"
+        "en": "Level command was received from button [[button]]"
       },
       "args": [
         {
           "type": "number",
-          "name": "group",
+          "name": "button",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "placeholder": {
-            "en": "0 = any group"
+            "en": "0 = any button"
           },
           "min": 0,
-          "max": 65534,
+          "max": 4,
           "step": 1
         }
       ],
       "tokens": [
         {
-          "name": "group",
+          "name": "button",
           "type": "number",
           "title": {
-            "en": "Group"
+            "en": "Button"
           },
           "example": 1
         },

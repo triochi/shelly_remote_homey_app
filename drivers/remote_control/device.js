@@ -4,11 +4,15 @@ const { ZigBeeDevice } = require('homey-zigbeedriver');
 const { Cluster, CLUSTER } = require('zigbee-clusters');
 
 const ShellyBasicCluster = require('../../lib/ShellyBasicCluster');
+const ShellyOnOffCluster = require('../../lib/ShellyOnOffCluster');
+const ShellyLevelControlCluster = require('../../lib/ShellyLevelControlCluster');
 const OnOffBoundCluster = require('../../lib/OnOffBoundCluster');
 const LevelControlBoundCluster = require('../../lib/LevelControlBoundCluster');
 
-// Register the custom Basic cluster with Shelly manufacturer-specific attributes
+// Register custom clusters with Shelly manufacturer-specific extensions
 Cluster.addCluster(ShellyBasicCluster);
+Cluster.addCluster(ShellyOnOffCluster);
+Cluster.addCluster(ShellyLevelControlCluster);
 
 /**
  * Shelly BLU Remote Control ZB
@@ -25,18 +29,18 @@ Cluster.addCluster(ShellyBasicCluster);
 class RemoteControl extends ZigBeeDevice {
 
   async onNodeInit({ zclNode }) {
-    // Register flow card run listeners for group filtering.
-    // args.group is what the user configures on the card (0 = any group).
-    // state.group is the actual groupId from the received command.
-    const groupRunListener = async (args, state) => {
-      if (args.group === 0) return true; // 0 means "any group"
-      return args.group === state.group;
+    // Register flow card run listeners for button filtering.
+    // args.button is what the user configures on the card (0 = any button).
+    // state.button is the actual button index from the received command.
+    const buttonRunListener = async (args, state) => {
+      if (args.button === 0) return true; // 0 means "any button"
+      return args.button === state.button;
     };
 
-    this.homey.flow.getDeviceTriggerCard('remote_on').registerRunListener(groupRunListener);
-    this.homey.flow.getDeviceTriggerCard('remote_off').registerRunListener(groupRunListener);
-    this.homey.flow.getDeviceTriggerCard('remote_toggle').registerRunListener(groupRunListener);
-    this.homey.flow.getDeviceTriggerCard('remote_level').registerRunListener(groupRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_on').registerRunListener(buttonRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_off').registerRunListener(buttonRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_toggle').registerRunListener(buttonRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_level').registerRunListener(buttonRunListener);
 
     // Register measure_battery capability and configure attribute reporting
     this.batteryThreshold = 20;
@@ -66,62 +70,46 @@ class RemoteControl extends ZigBeeDevice {
       onMoveToLevelWithOnOff: this._moveToLevelCommandHandler.bind(this),
     }));
 
-    // Read group addresses from the device (non-blocking, device is sleepy)
-    this._readGroupAddresses(zclNode).catch(err => {
-      this.error('Could not read group addresses on init (device may be asleep):', err.message);
+    // Read device settings from the device (non-blocking, device is sleepy)
+    this._readDeviceSettings(zclNode).catch(err => {
+      this.error('Could not read device settings on init (device may be asleep):', err.message);
     });
   }
 
   /**
-   * Read the 4 manufacturer-specific group address attributes from the Basic cluster.
-   * Since this is a sleepy device, this may time out — it is best done right after
-   * pairing when the device is still awake.
+   * Read the manufacturer-specific attributes from the Basic cluster:
+   * group addresses (0x8000–0x8003) and command mode (0x8004).
+   * Since this is a sleepy device, this may time out — it is best done right
+   * after pairing when the device is still awake.
    * @param {object} zclNode
    * @private
    */
-  async _readGroupAddresses(zclNode) {
+  async _readDeviceSettings(zclNode) {
     const basicCluster = zclNode.endpoints[1].clusters.basic;
 
-    // Step 1: Verify the Basic cluster works by reading a standard attribute
-    try {
-      const stdResult = await basicCluster.readAttributes(['manufacturerName', 'modelId']);
-      this.log('Basic cluster standard attrs:', stdResult);
-    } catch (err) {
-      this.error('Failed to read standard Basic attrs:', err.message);
-    }
-
-    // Step 2: Try reading mfg-specific attributes by name
     try {
       const result = await basicCluster.readAttributes([
         'shellyGroupAddress1',
         'shellyGroupAddress2',
         'shellyGroupAddress3',
         'shellyGroupAddress4',
+        'shellyCommandMode',
       ]);
-      this.log('Group addresses read by name:', result);
+      this.log('Device settings read:', result);
 
       const settings = {};
       if (result.shellyGroupAddress1 != null) settings.group_address_1 = result.shellyGroupAddress1;
       if (result.shellyGroupAddress2 != null) settings.group_address_2 = result.shellyGroupAddress2;
       if (result.shellyGroupAddress3 != null) settings.group_address_3 = result.shellyGroupAddress3;
       if (result.shellyGroupAddress4 != null) settings.group_address_4 = result.shellyGroupAddress4;
+      if (result.shellyCommandMode != null) settings.command_mode = String(result.shellyCommandMode);
 
       if (Object.keys(settings).length > 0) {
         await this.setSettings(settings);
-        this.log('Group address settings saved:', settings);
-        return;
+        this.log('Device settings saved:', settings);
       }
     } catch (err) {
-      this.error('Failed to read group addresses by name:', err.message);
-    }
-
-    // Step 3: If named read returned empty, try raw numeric attribute IDs
-    try {
-      this.log('Trying raw numeric attribute IDs (0x8000-0x8003)...');
-      const rawResult = await basicCluster.readAttributes([0x8000, 0x8001, 0x8002, 0x8003]);
-      this.log('Group addresses read by raw ID:', rawResult);
-    } catch (err) {
-      this.error('Failed to read group addresses by raw ID:', err.message);
+      this.error('Failed to read device settings:', err.message);
     }
   }
 
@@ -137,20 +125,24 @@ class RemoteControl extends ZigBeeDevice {
       group_address_2: 'shellyGroupAddress2',
       group_address_3: 'shellyGroupAddress3',
       group_address_4: 'shellyGroupAddress4',
+      command_mode: 'shellyCommandMode',
     };
 
     const writeAttrs = {};
     for (const key of changedKeys) {
       if (attrMap[key]) {
-        writeAttrs[attrMap[key]] = newSettings[key];
+        // command_mode is stored as string in dropdown, convert to uint8
+        writeAttrs[attrMap[key]] = key === 'command_mode'
+          ? parseInt(newSettings[key], 10)
+          : newSettings[key];
       }
     }
 
     if (Object.keys(writeAttrs).length > 0) {
-      this.log('Writing group addresses to device:', writeAttrs);
+      this.log('Writing settings to device:', writeAttrs);
       const basicCluster = this.zclNode.endpoints[1].clusters.basic;
       await basicCluster.writeAttributes(writeAttrs);
-      this.log('Group addresses written successfully');
+      this.log('Settings written successfully');
     }
   }
 
@@ -159,18 +151,31 @@ class RemoteControl extends ZigBeeDevice {
   // ---------------------------------------------------------------------------
 
   /**
+   * Resolves the button index from the command parameters.
+   * In custom mode: buttonIndex comes directly from the mfg-specific command.
+   * In standard mode: buttonIndex is null (unknown).
+   * @param {number|null} buttonIndex
+   * @returns {number} button index (1–4), or -1 if unknown
+   * @private
+   */
+  _resolveButton(buttonIndex) {
+    return buttonIndex != null ? buttonIndex : -1;
+  }
+
+  /**
    * Handles the On command from the remote.
    * @param {object} params
    * @param {number} [params.groupId] - Zigbee group ID the command was sent to
+   * @param {number|null} [params.buttonIndex] - Button index (custom mode only)
    * @private
    */
-  _onCommandHandler({ groupId }) {
-    this.log(`Received On command (group=${groupId})`);
-    const group = groupId != null ? groupId : -1;
+  _onCommandHandler({ groupId, buttonIndex }) {
+    const button = this._resolveButton(buttonIndex);
+    this.log(`Received On command (group=${groupId}, button=${button})`);
     this.triggerFlow({
       id: 'remote_on',
-      tokens: { group },
-      state: { group },
+      tokens: { button },
+      state: { button },
     })
       .then(() => this.log('Flow triggered: remote_on'))
       .catch(err => this.error('Error triggering flow remote_on:', err));
@@ -180,15 +185,16 @@ class RemoteControl extends ZigBeeDevice {
    * Handles the Off command from the remote.
    * @param {object} params
    * @param {number} [params.groupId] - Zigbee group ID the command was sent to
+   * @param {number|null} [params.buttonIndex] - Button index (custom mode only)
    * @private
    */
-  _offCommandHandler({ groupId }) {
-    this.log(`Received Off command (group=${groupId})`);
-    const group = groupId != null ? groupId : -1;
+  _offCommandHandler({ groupId, buttonIndex }) {
+    const button = this._resolveButton(buttonIndex);
+    this.log(`Received Off command (group=${groupId}, button=${button})`);
     this.triggerFlow({
       id: 'remote_off',
-      tokens: { group },
-      state: { group },
+      tokens: { button },
+      state: { button },
     })
       .then(() => this.log('Flow triggered: remote_off'))
       .catch(err => this.error('Error triggering flow remote_off:', err));
@@ -198,15 +204,16 @@ class RemoteControl extends ZigBeeDevice {
    * Handles the Toggle command from the remote.
    * @param {object} params
    * @param {number} [params.groupId] - Zigbee group ID the command was sent to
+   * @param {number|null} [params.buttonIndex] - Button index (custom mode only)
    * @private
    */
-  _toggleCommandHandler({ groupId }) {
-    this.log(`Received Toggle command (group=${groupId})`);
-    const group = groupId != null ? groupId : -1;
+  _toggleCommandHandler({ groupId, buttonIndex }) {
+    const button = this._resolveButton(buttonIndex);
+    this.log(`Received Toggle command (group=${groupId}, button=${button})`);
     this.triggerFlow({
       id: 'remote_toggle',
-      tokens: { group },
-      state: { group },
+      tokens: { button },
+      state: { button },
     })
       .then(() => this.log('Flow triggered: remote_toggle'))
       .catch(err => this.error('Error triggering flow remote_toggle:', err));
@@ -223,23 +230,23 @@ class RemoteControl extends ZigBeeDevice {
    * @param {number} payload.transitionTime - Transition time in 1/10th seconds
    * @private
    */
-  _moveToLevelCommandHandler({ level, transitionTime, groupId }) {
+  _moveToLevelCommandHandler({ level, transitionTime, groupId, buttonIndex }) {
     // Normalize level from 0–254 to 0–1
     const normalizedLevel = Math.min(Math.max(level / 254, 0), 1);
     const roundedLevel = Math.round(normalizedLevel * 100) / 100;
+    const button = this._resolveButton(buttonIndex);
 
-    this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}, group=${groupId}`);
+    this.log(`Received MoveToLevel command: level=${level} (${roundedLevel}), transitionTime=${transitionTime}, button=${button}`);
 
-    const group = groupId != null ? groupId : -1;
     this.triggerFlow({
       id: 'remote_level',
       tokens: {
         level: roundedLevel,
         level_raw: level,
         transition_time: transitionTime != null ? transitionTime / 10 : 0,
-        group,
+        button,
       },
-      state: { group },
+      state: { button },
     })
       .then(() => this.log('Flow triggered: remote_level'))
       .catch(err => this.error('Error triggering flow remote_level:', err));

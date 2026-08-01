@@ -45,6 +45,39 @@
     {
       "type": "group",
       "label": {
+        "en": "Command Mode"
+      },
+      "children": [
+        {
+          "id": "command_mode",
+          "type": "dropdown",
+          "label": {
+            "en": "Command Mode"
+          },
+          "hint": {
+            "en": "Standard mode sends regular On/Off commands (compatible with Zigbee lights). Custom mode sends manufacturer-specific commands that include the button index (for Homey integration)."
+          },
+          "value": "0",
+          "values": [
+            {
+              "id": "0",
+              "label": {
+                "en": "Standard (compatible with Zigbee lights)"
+              }
+            },
+            {
+              "id": "1",
+              "label": {
+                "en": "Custom (with button identification)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
         "en": "Group Addresses"
       },
       "children": [
