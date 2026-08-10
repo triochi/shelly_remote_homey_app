@@ -41,6 +41,7 @@ class RemoteControl extends ZigBeeDevice {
     this.homey.flow.getDeviceTriggerCard('remote_off').registerRunListener(buttonRunListener);
     this.homey.flow.getDeviceTriggerCard('remote_toggle').registerRunListener(buttonRunListener);
     this.homey.flow.getDeviceTriggerCard('remote_level').registerRunListener(buttonRunListener);
+    this.homey.flow.getDeviceTriggerCard('remote_step').registerRunListener(buttonRunListener);
 
     // Register measure_battery capability and configure attribute reporting
     this.batteryThreshold = 20;
@@ -68,6 +69,7 @@ class RemoteControl extends ZigBeeDevice {
     zclNode.endpoints[1].bind(CLUSTER.LEVEL_CONTROL.NAME, new LevelControlBoundCluster({
       onMoveToLevel: this._moveToLevelCommandHandler.bind(this),
       onMoveToLevelWithOnOff: this._moveToLevelCommandHandler.bind(this),
+      onStepWithOnOff: this._stepCommandHandler.bind(this),
     }));
 
     // On first init (right after pairing, device is still awake):
@@ -296,6 +298,40 @@ class RemoteControl extends ZigBeeDevice {
     })
       .then(() => this.log('Flow triggered: remote_level'))
       .catch(err => this.error('Error triggering flow remote_level:', err));
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Step command handler
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handles the StepWithOnOff command from the remote.
+   * @param {object} payload
+   * @param {number} payload.stepMode - 0 = up, 1 = down
+   * @param {number} payload.stepSize - Step size (0–255)
+   * @param {number} payload.transitionTime - Transition time in 1/10th seconds
+   * @param {number} [payload.groupId] - Zigbee group ID the command was sent to
+   * @param {number|null} [payload.buttonIndex] - Button index (custom mode only)
+   * @private
+   */
+  _stepCommandHandler({ stepMode, stepSize, transitionTime, groupId, buttonIndex }) {
+    const button = this._resolveButton(buttonIndex);
+    const direction = stepMode === 0 ? 'up' : 'down';
+
+    this.log(`Received Step command: direction=${direction}, stepSize=${stepSize}, transitionTime=${transitionTime}, button=${button}`);
+
+    this.triggerFlow({
+      id: 'remote_step',
+      tokens: {
+        direction,
+        step_size: stepSize,
+        transition_time: transitionTime != null ? transitionTime / 10 : 0,
+        button,
+      },
+      state: { button },
+    })
+      .then(() => this.log('Flow triggered: remote_step'))
+      .catch(err => this.error('Error triggering flow remote_step:', err));
   }
 
 }

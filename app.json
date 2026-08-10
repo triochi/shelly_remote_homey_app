@@ -209,6 +209,69 @@
             "example": 1
           }
         ]
+      },
+      {
+        "id": "remote_step",
+        "title": {
+          "en": "Step command was received"
+        },
+        "titleFormatted": {
+          "en": "Step command was received from button [[button]]"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=remote_control"
+          },
+          {
+            "type": "number",
+            "name": "button",
+            "title": {
+              "en": "Button"
+            },
+            "placeholder": {
+              "en": "0 = any button"
+            },
+            "min": 0,
+            "max": 4,
+            "step": 1
+          }
+        ],
+        "tokens": [
+          {
+            "name": "button",
+            "type": "number",
+            "title": {
+              "en": "Button"
+            },
+            "example": 1
+          },
+          {
+            "name": "direction",
+            "type": "string",
+            "title": {
+              "en": "Direction"
+            },
+            "example": "up"
+          },
+          {
+            "name": "step_size",
+            "type": "number",
+            "title": {
+              "en": "Step size"
+            },
+            "example": 25
+          },
+          {
+            "name": "transition_time",
+            "type": "number",
+            "title": {
+              "en": "Transition time (s)"
+            },
+            "example": 1
+          }
+        ]
       }
     ]
   },
